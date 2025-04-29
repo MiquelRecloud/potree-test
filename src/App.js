@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { Potree } from 'potree-core'
 
 function App() {
     const mountRef = useRef(null)
@@ -12,7 +13,7 @@ function App() {
 
         // Camera
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-        camera.position.set(0, 0, 1)
+        camera.position.set(5, 5, 5)
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -37,6 +38,33 @@ function App() {
         const material = new THREE.MeshStandardMaterial({ color: 0x0077ff })
         const cube = new THREE.Mesh(geometry, material)
         scene.add(cube)
+
+        const baseUrl = 'https://cdn.rawgit.com/potree/potree/develop/pointclouds/lion_takanawa/'
+        const potree = new Potree()
+        const pointClouds = []
+
+        potree
+            .loadPointCloud('cloud.js', (url) => `${baseUrl}${url}`)
+            .then(function (pco) {
+                // center pco
+                pco.position.set(-1, -1, 2)
+                pco.rotation.set((6.28318531 * 3) / 4, 0, 0)
+                // reduce point size
+                pco.material.size = 0.01
+                console.log(pco)
+                scene.add(pco)
+                pointClouds.push(pco)
+            })
+
+        function loop() {
+            potree.updatePointClouds(pointClouds, camera, renderer)
+
+            controls.update()
+            renderer.render(scene, camera)
+
+            requestAnimationFrame(loop)
+        }
+        loop()
 
         renderer.render(scene, camera)
     }, [])
