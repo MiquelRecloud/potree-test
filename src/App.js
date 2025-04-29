@@ -39,12 +39,16 @@ function App() {
         const cube = new THREE.Mesh(geometry, material)
         scene.add(cube)
 
-        const baseUrl = 'https://cdn.rawgit.com/potree/potree/develop/pointclouds/lion_takanawa/'
+        let baseUrl = 'https://cdn.rawgit.com/potree/potree/develop/pointclouds/lion_takanawa/'
+        baseUrl = `${process.env.PUBLIC_URL}/Comsa/`
+        baseUrl = `${process.env.PUBLIC_URL}/lion_takanawa/`
+        baseUrl = `https://potree-tests.s3.eu-west-3.amazonaws.com/lion_takanawa/`
+        baseUrl = `https://potree-tests.s3.eu-west-3.amazonaws.com/Comsa/`
         const potree = new Potree()
         const pointClouds = []
 
         potree
-            .loadPointCloud('cloud.js', (url) => `${baseUrl}${url}`)
+            .loadPointCloud('metadata.json', (url) => `${baseUrl}${url}`)
             .then(function (pco) {
                 // center pco
                 pco.position.set(-1, -1, 2)
