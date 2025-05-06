@@ -1,43 +1,45 @@
 import React, { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import * as OBC from '@thatopen/components'
 import { Potree } from 'potree-core'
 
 function App() {
     const mountRef = useRef(null)
 
     useEffect(() => {
-        // Scene
-        const scene = new THREE.Scene()
-        scene.background = new THREE.Color(0xdddddd)
+        const container = mountRef.current
+        const components = new OBC.Components()
+        const worlds = components.get(OBC.Worlds)
 
-        // Camera
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-        camera.position.set(5, 5, 5)
+        const world = worlds.create()
 
-        // Renderer
-        const renderer = new THREE.WebGLRenderer({ antialias: true })
-        renderer.setSize(window.innerWidth, window.innerHeight)
-        mountRef.current.appendChild(renderer.domElement)
+        world.scene = new OBC.SimpleScene(components)
+        world.renderer = new OBC.SimpleRenderer(components, container)
+        world.camera = new OBC.SimpleCamera(components)
 
-        // Controls
-        const controls = new OrbitControls(camera, renderer.domElement)
-        controls.addEventListener('change', () => {
-            renderer.render(scene, camera)
-        })
+        world.camera.three.near = 0.001
+        world.camera.three.far = 10000
 
-        // Light
-        const ambientLight = new THREE.AmbientLight(0x404040, 1.5)
-        scene.add(ambientLight)
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
-        directionalLight.position.set(5, 5, 5).normalize()
-        scene.add(directionalLight)
+        components.init()
+
+        world.scene.setup()
+        world.scene.three.background = new THREE.Color(0xffffff)
+
+        function onWindowResize() {
+            try {
+                world.camera.three.aspect = container.offsetWidth / container.offsetHeight
+                world.camera.three.updateProjectionMatrix()
+                if (world.renderer) world.renderer.three.setSize(container.offsetWidth, container.offsetHeight)
+            } catch (e) {}
+        }
+        window.addEventListener('resize', onWindowResize, false)
+        onWindowResize()
 
         // Load a cube
         const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2)
         const material = new THREE.MeshStandardMaterial({ color: 0x0077ff })
         const cube = new THREE.Mesh(geometry, material)
-        scene.add(cube)
+        world.scene.three.add(cube)
 
         let baseUrl = 'https://cdn.rawgit.com/potree/potree/develop/pointclouds/lion_takanawa/'
         baseUrl = `${process.env.PUBLIC_URL}/Comsa/`
@@ -51,26 +53,20 @@ function App() {
             .loadPointCloud('metadata.json', (url) => `${baseUrl}${url}`)
             .then(function (pco) {
                 // center pco
-                pco.position.set(-1, -1, 2)
+                pco.position.set(0, 0, 0)
                 pco.rotation.set((6.28318531 * 3) / 4, 0, 0)
                 // reduce point size
                 pco.material.size = 0.01
                 console.log(pco)
-                scene.add(pco)
+                world.scene.three.add(pco)
                 pointClouds.push(pco)
             })
 
         function loop() {
-            potree.updatePointClouds(pointClouds, camera, renderer)
-
-            controls.update()
-            renderer.render(scene, camera)
-
+            potree.updatePointClouds(pointClouds, world.camera.three, world.renderer.three)
             requestAnimationFrame(loop)
         }
         loop()
-
-        renderer.render(scene, camera)
     }, [])
 
     return (
